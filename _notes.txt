@@ -1,0 +1,57 @@
+uv add llama-index llama-parse fastapi uvicorn python-dotenv llama-index-vector-stores-qdrant llama-index-llms-openai
+
+uv add --dev pytest ruff
+
+uv add qdrant-client
+
+uv add pydantic
+
+
+Folder Structure (Clean & Scalable)
+
+smsf-rag/
+│
+├── app/
+│   ├── main.py                 # FastAPI entry
+│   ├── api/
+│   │   ├── query.py            # /ask endpoint
+│   │   └── health.py
+│   ├── core/
+│   │   ├── config.py           # env, constants
+│   │   ├── embeddings.py
+│   │   ├── vectorstore.py
+│   │   └── llm.py
+│   └── schemas/
+│       ├── request.py
+│       └── response.py
+│
+├── ingestion/
+│   ├── loaders/
+│   │   ├── sis_loader.py
+│   │   ├── ato_loader.py
+│   │   └── trust_deed_loader.py
+│   ├── chunkers/
+│   │   ├── sis_chunker.py
+│   │   ├── ato_chunker.py
+│   │   └── trust_deed_chunker.py
+│   ├── pipelines/
+│   │   └── ingest_all.py
+│   └── validators/
+│       └── chunk_validator.py
+│
+├── prompts/
+│   ├── legal_answer.txt
+│   └── citation_guard.txt
+│
+├── tests/
+│   ├── test_chunking.py
+│   ├── test_retrieval.py
+│   └── test_citations.py
+│
+├── data/
+│   ├── raw/
+│   └── processed/
+│
+├── .env
+├── pyproject.toml
+└── README.md
