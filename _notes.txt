@@ -6,6 +6,18 @@ uv add qdrant-client
 
 uv add pydantic
 
+#### uv add llama-index-extractors-entity llama-index-readers-file
+UV_HTTP_TIMEOUT=300 uv add llama-index-extractors-entity llama-index-readers-file
+
+If the error persists:
+If a 300s timeout still fails, it might be due to concurrent download overhead. 
+You can limit uv to download one file at a time to save bandwidth:
+UV_HTTP_TIMEOUT=600 UV_CONCURRENT_DOWNLOADS=1 uv add llama-index-extractors-entity llama-index-readers-file
+Pro-Tip for your Folder Structure
+Since you are building a production-grade app, I recommend adding these dependencies to 
+your pyproject.toml manually if the CLI keeps timing out, then running 
+uv sync 
+once you are on a faster network.
 
 Folder Structure (Clean & Scalable)
 
@@ -51,6 +63,46 @@ smsf-rag/
 ├── data/
 │   ├── raw/
 │   └── processed/
+│
+├── .env
+├── pyproject.toml
+└── README.md
+
+
+Revised Structure
+
+smsf-rag/
+│
+├── app/
+│   ├── main.py                  # FastAPI entry & Lifespan management
+│   ├── api/
+│   │   ├── v1/                  # Versioning is key for legal apps
+│   │   │   ├── query.py         # /ask endpoint
+│   │   │   └── health.py
+│   ├── core/
+│   │   ├── config.py            # Settings (Pydantic Settings)
+│   │   ├── provider.py          # Unified LLM & Embedding setup (Settings object)
+│   │   └── vectorstore.py       # Qdrant client connection logic
+│   ├── engine/                  # NEW: Logic to build the actual RAG pipeline
+│   │   ├── query_engine.py      # Combines Retriever + Post-processors + Prompts
+│   │   └── tools/               # For Agentic RAG (e.g., specific search tools)
+│   └── schemas/                 # Pydantic models
+│
+├── ingestion/
+│   ├── parsers/                 # REPLACED 'loaders' & 'chunkers'
+│   │   ├── sis_parser.py        # Logic for Act sections
+│   │   └── ato_parser.py        # Logic for Ruling metadata
+│   ├── pipeline.py              # LlamaIndex IngestionPipeline orchestration
+│   └── run.py                   # CLI script to trigger ingestion
+│
+├── prompts/                     # Prompt engineering (keep as .py or .yaml)
+│   └── templates.py             # LlamaIndex PromptTemplate objects
+│
+├── tests/                       # Your testing structure is excellent
+│
+├── data/
+│   ├── source/                  # Original PDFs
+│   └── cache/                   # Storage for local docstore/index state
 │
 ├── .env
 ├── pyproject.toml
