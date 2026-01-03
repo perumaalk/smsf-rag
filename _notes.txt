@@ -8,6 +8,8 @@ uv add pydantic pydantic-settings
 
 uv add llama-index-vector-stores-qdrant qdrant-client
 
+uv add pytest pytest-asyncio httpx
+
 #### uv add llama-index-extractors-entity llama-index-readers-file
 UV_HTTP_TIMEOUT=300 uv add llama-index-extractors-entity llama-index-readers-file
 
