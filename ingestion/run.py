@@ -1,6 +1,7 @@
 import os
 from ingestion.parsers.sis_parser import get_sis_nodes
 from ingestion.parsers.ato_parser import get_ato_nodes
+from ingestion.parsers.trust_deed_parser import get_trust_deed_nodes
 from ingestion.pipeline import build_pipeline
 
 def main():
