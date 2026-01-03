@@ -1,0 +1,29 @@
+services:
+  # 1. The FastAPI Web Service
+  - type: web
+    name: smsf-rag-api
+    env: python
+    plan: free # Change to 'starter' for $7/mo to avoid sleep
+    buildCommand: "uv sync --frozen" # Uses your uv lockfile for speed
+    startCommand: "uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: QDRANT_URL
+        sync: false # Set this in the Render Dashboard UI
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: LLAMA_CLOUD_API_KEY
+        sync: false
+
+  # 2. The Ingestion Worker (Optional)
+  # This runs your ingestion/run.py as a background task
+  # Note: Background workers are not available on Render's 'free' tier.
+  # - type: worker
+  #   name: smsf-ingestion-worker
+  #   env: python
+  #   buildCommand: "uv sync --frozen"
+  #   startCommand: "uv run python ingestion/run.py"

@@ -1,3 +1,4 @@
+/*
 {
   "name": "smsf-rag",
   "image": "mcr.microsoft.com/devcontainers/python:3.11",
@@ -14,4 +15,33 @@
       ]
     }
   }
+}
+  */
+{
+  "name": "smsf-rag",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "containerEnv": {
+    "UV_HTTP_TIMEOUT": "300",
+    "PYTHONPATH": "${containerWorkspaceFolder}"
+  },
+  "postCreateCommand": "curl -LsSf https://astral.sh/uv/install.sh | sh && . $HOME/.cargo/env && uv venv && uv sync",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "python.defaultInterpreterPath": ".venv/bin/python",
+        "python.terminal.activateEnvironment": true,
+        "python.analysis.extraPaths": ["${containerWorkspaceFolder}/app"]
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "tamasfe.even-better-toml",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "remoteUser": "vscode"
 }
