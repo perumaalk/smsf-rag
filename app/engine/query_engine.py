@@ -1,4 +1,5 @@
-from llama_index.core.query_engine import RouterQueryEngine, CustomQueryEngine, RetrievalQueryEngine
+from llama_index.core.query_engine import RouterQueryEngine, CustomQueryEngine
+from llama_index.core import RetrievalQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
 from llama_index.core.tools import QueryEngineTool
 from llama_index.llms.openai import OpenAI

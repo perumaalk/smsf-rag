@@ -2399,7 +2399,6 @@ dependencies = [
     { name = "pytest-asyncio" },
     { name = "python-dotenv" },
     { name = "qdrant-client" },
-    { name = "requests" },
     { name = "uvicorn" },
 ]
 
@@ -2425,7 +2424,6 @@ requires-dist = [
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "qdrant-client", specifier = ">=1.16.2" },
-    { name = "requests" },
     { name = "uvicorn", specifier = ">=0.40.0" },
 ]
 
