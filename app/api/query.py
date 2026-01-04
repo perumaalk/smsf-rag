@@ -1,33 +1,40 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from app.engine.query_engine import get_smsf_query_engine
 
-# 1. This defines the 'router' attribute that Render is looking for
 router = APIRouter()
 
-# 2. Define what a 'Question' looks like (Data Validation)
 class QueryRequest(BaseModel):
     fund_id: str
     question: str
 
-@router.post("/ask")
-async def ask_smsf_question(request: QueryRequest):
-    """
-    Takes a question and a fund_id, and returns a verified 
-    answer from the SIS Act or the specific Trust Deed.
-    """
+# 1. We define the logic ONCE in this shared function
+async def execute_rag_logic(query_data: QueryRequest, request: Request):
     try:
-        # Get the engine (which already has the Qdrant filters applied)
-        engine = get_smsf_query_engine(request.fund_id)
+        vector_index = getattr(request.app.state, "vector_index", None)
+        if vector_index is None:
+            raise HTTPException(status_code=500, detail="Index not initialized")
+
+        engine = get_smsf_query_engine(
+            fund_id=query_data.fund_id, 
+            vector_index=vector_index
+        )
         
-        # Query the LLM/Vector Store
-        response = engine.query(request.question)
+        response = engine.query(query_data.question)
         
         return {
             "answer": str(response),
-            "fund_id": request.fund_id,
+            "fund_id": query_data.fund_id,
             "sources": [n.node.get_content()[:200] for n in response.source_nodes]
         }
     except Exception as e:
-        # If Qdrant is down or OpenAI fails, return a 500 error
-        raise HTTPException(status_code=500, detail=f"RAG Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 2. Map BOTH routes to that same logic
+@router.post("/ask")
+async def ask_endpoint(query_data: QueryRequest, request: Request):
+    return await execute_rag_logic(query_data, request)
+
+@router.post("/query")
+async def query_endpoint(query_data: QueryRequest, request: Request):
+    return await execute_rag_logic(query_data, request)
