@@ -46,27 +46,7 @@ async def lifespan(app: FastAPI):
     # SHUTDOWN
     app.state.vector_index = None
     
-# @asynccontextmanager
-# async def lifespan(app: FastAPI):
-#     # # STARTUP: Connect to Qdrant & build the Query Engine
-#     # print(f"Connecting to Qdrant at {settings.QDRANT_URL}...")
-#     # engine_container["query_engine"] = get_smsf_query_engine()
-#     # yield
-#     # # SHUTDOWN: Clean up resources if necessary
-#     # engine_container.clear()
-#     # STARTUP
-#     try:
-#         print(f"Connecting to Qdrant at {settings.QDRANT_URL}...")
-#         # This calls your updated helper function
-#         engine_container["query_engine"] = get_smsf_query_engine()
-#         print("Query engine initialized successfully.")
-#     except Exception as e:
-#         print(f"CRITICAL: Failed to initialize query engine: {e}")
-#         # On Render, failing here will show up clearly in logs
-#         raise e 
-#     yield
-#     # SHUTDOWN
-#     engine_container.clear()
+
 
 app = FastAPI(
     title="SMSF RAG API",

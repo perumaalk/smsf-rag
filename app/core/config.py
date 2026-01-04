@@ -8,11 +8,11 @@ from llama_index.llms.openai import OpenAI
 class AppSettings(BaseSettings):
     # This looks for these keys in your Render Env Vars
     OPENAI_API_KEY: str
-    QDRANT_URL: str
-    QDRANT_API_KEY: str
+    QDRANT_URL: str = "http://localhost:6333"
+    QDRANT_API_KEY: str = "optional_locally"
     
     # Optional: Load from .env file locally
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_ignore_empty=True)
 
 # Initialize the environment settings
 settings = AppSettings()

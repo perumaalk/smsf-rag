@@ -8,15 +8,16 @@ router = APIRouter()
 async def health_check():
     health_status = {"status": "healthy", "checks": {}}
     
-    # 1. Check Vector DB Connection (Qdrant)
     try:
-        client = qdrant_client.QdrantClient(url=settings.QDRANT_URL)
-        client.get_collections() # Simple ping
+        # CORRECTION: You must pass the api_key here!
+        client = qdrant_client.QdrantClient(
+            url=settings.QDRANT_URL,
+            api_key=settings.QDRANT_API_KEY  # This was missing
+        )
+        client.get_collections() 
         health_status["checks"]["vector_db"] = "connected"
     except Exception as e:
         health_status["status"] = "unhealthy"
         health_status["checks"]["vector_db"] = f"error: {str(e)}"
         
-    # 2. Add other checks (e.g., OpenAI API reachability)
-    
     return health_status
