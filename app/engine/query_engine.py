@@ -1,10 +1,10 @@
 from llama_index.core.query_engine import RouterQueryEngine, CustomQueryEngine
-from llama_index.core import RetrievalQueryEngine
 from llama_index.core.selectors import LLMSingleSelector
 from llama_index.core.tools import QueryEngineTool
 from llama_index.llms.openai import OpenAI
 from llama_index.core.vector_stores import MetadataFilters, ExactMatchFilter
 from app.prompts.smsf_templates import SMSF_FALLBACK_PROMPT
+from llama_index.core import RetrievalQueryEngine
 
 # Import your configured index and the new templates
 from app.core.vectorstore import index as vector_index
