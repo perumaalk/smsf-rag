@@ -37,39 +37,37 @@ class DOSpacesHandler:
         )
 
     def list_files(self, prefix=""):
-        """Lists all files recursively under a prefix."""
+        """Lists files and generates a temporary download link for each."""
         try:
-            # Ensure prefix ends with / to treat it as a directory
-            if prefix and not prefix.endswith('/'):
-                prefix += '/'
-
             response = self.client.list_objects_v2(
                 Bucket=self.bucket_name, 
                 Prefix=prefix
             )
-
-            # --- DEBUG START ---
-            print(f"DEBUG: Full Response: {response}")
-            # -------------------
-            
-            if 'Contents' not in response:
-                print("DEBUG: 'Contents' key is missing from the response.")
-                return []
             
             files = []
             for obj in response.get('Contents', []):
-                # Skip the folder object itself (the 0-byte key ending in '/')
-                if obj['Key'] == prefix:
+                key = obj['Key']
+                
+                # Skip the directory markers (0-byte objects ending in '/')
+                if key.endswith('/'):
                     continue
-                    
+
+                # Generate the temporary link (valid for 1 hour)
+                download_url = self.client.generate_presigned_url(
+                    'get_object',
+                    Params={'Bucket': self.bucket_name, 'Key': key},
+                    ExpiresIn=3600
+                )
+
                 files.append({
-                    "name": obj['Key'], 
-                    "size": obj['Size'], 
-                    # Convert datetime to string so FastAPI can return it as JSON
-                    "last_modified": obj['LastModified'].isoformat() 
+                    "name": key.split('/')[-1], # Just the filename for the UI
+                    "path": key,                # Full path in the Space
+                    "size": obj['Size'],
+                    "last_modified": obj['LastModified'].isoformat(),
+                    "download_url": download_url
                 })
+                
             return files
-            
         except ClientError as e:
             print(f"Error listing files: {e}")
             return []
@@ -83,27 +81,79 @@ class DOSpacesHandler:
             print(f"Error reading file {file_key}: {e}")
             return None
     
+    def generate_download_url(self, file_key: str, expires_in: int = 3600):
+        """
+        Generates a temporary URL to download a file.
+        :param file_key: The full path/name of the file in the Space.
+        :param expires_in: Time in seconds before link expires (default 1 hour).
+        """
+        try:
+            url = self.client.generate_presigned_url(
+                'get_object',
+                Params={
+                    'Bucket': self.bucket_name,
+                    'Key': file_key
+                },
+                ExpiresIn=expires_in
+            )
+            return url
+        except ClientError as e:
+            print(f"Error generating presigned URL: {e}")
+            return None
+        
     def get_registry(self):
         """Reads registry.json from the root of the Space."""
+        # try:
+        #     response = self.client.get_object(Bucket=self.bucket_name, Key='registry.json')
+        #     return json.loads(response['Body'].read().decode('utf-8'))
+        # except ClientError as e:
+        #     # If file doesn't exist, return an empty list or structure
+        #     if e.response['Error']['Code'] == 'NoSuchKey':
+        #         return {"indexed_files": []}
+        #     return {"error": str(e)}
         try:
-            response = self.client.get_object(Bucket=self.bucket_name, Key='registry.json')
+            response = self.client.get_object(Bucket=self.bucket_name, Key="registry.json")
             return json.loads(response['Body'].read().decode('utf-8'))
-        except ClientError as e:
-            # If file doesn't exist, return an empty list or structure
-            if e.response['Error']['Code'] == 'NoSuchKey':
-                return {"indexed_files": []}
-            return {"error": str(e)}
+        except self.client.exceptions.NoSuchKey:
+            # If the file doesn't exist, return a fresh template
+            return {"indexed_files": []}
+        except Exception as e:
+            print(f"Error fetching registry: {e}")
+            return {"indexed_files": []}
 
     def save_registry(self, registry_data):
-        """Writes the updated registry.json back to the Space."""
+        """
+        Serializes and uploads the registry dictionary to DigitalOcean Spaces.
+        """
         try:
+            # 1. Convert dictionary to a JSON string
+            # indent=2 makes it human-readable if you open it in a text editor
+            json_data = json.dumps(registry_data, indent=2)
+
+            # 2. Upload the string as a file
             self.client.put_object(
                 Bucket=self.bucket_name,
-                Key='registry.json',
-                Body=json.dumps(registry_data, indent=4),
-                ContentType='application/json'
+                Key="registry.json",
+                Body=json_data,
+                ContentType='application/json',  # Important for browser viewing
+                ACL='private'                    # Keep your registry private
             )
             return True
+        except ClientError as e:
+            print(f"Error saving registry to Spaces: {e}")
+            return False
         except Exception as e:
-            print(f"Error saving registry: {e}")
+            print(f"General error in save_registry: {e}")
+            return False
+    
+    def delete_file(self, file_key: str):
+        """Removes the file from the DigitalOcean Space."""
+        try:
+            self.client.delete_object(
+                Bucket=self.bucket_name,
+                Key=file_key
+            )
+            return True
+        except ClientError as e:
+            print(f"Error deleting file from Spaces: {e}")
             return False
