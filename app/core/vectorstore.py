@@ -14,7 +14,7 @@ client = qdrant_client.QdrantClient(
 # This is where the 'not defined' error was happening
 vector_store = QdrantVectorStore(
     client=client, 
-    collection_name="smsf_legal_docs"
+    collection_name="smsf_docs"
 )
 
 # 3. Setup Storage Context

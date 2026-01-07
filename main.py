@@ -1,40 +1,36 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.api import query, health
-from app.core.config import settings
-from app.engine.query_engine import get_smsf_query_engine
-# We store the engine here to avoid re-initializing it on every request
-engine_container = {}
-
 import qdrant_client
 from llama_index.core import VectorStoreIndex, StorageContext
 from llama_index.vector_stores.qdrant import QdrantVectorStore
+
+# Correct Absolute Imports
+from app.api.routes import query
+from app.api.routes import health
+from app.api.routes import storage
+# from app.api.routes.storage import router as storage_router
+from app.core.config import settings
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # STARTUP
     try:
-        # 1. Initialize the Qdrant Client
         client = qdrant_client.QdrantClient(
             url=settings.QDRANT_URL, 
-            api_key=settings.QDRANT_API_KEY # Use your env variable name
+            api_key=settings.QDRANT_API_KEY
         )
         
-        # 2. Setup the Vector Store for your specific collection
         vector_store = QdrantVectorStore(
             client=client, 
-            collection_name="your_collection_name" # Update this
+            collection_name="smsf_documents" # Ensure this matches your setup
         )
         
-        # 3. Connect the Index to the existing Vector Store
-        # This does NOT re-index your data; it just connects to it
         storage_context = StorageContext.from_defaults(vector_store=vector_store)
         index = VectorStoreIndex.from_vector_store(
             vector_store=vector_store, 
             storage_context=storage_context
         )
         
-        # 4. Store it in app.state so other files can find it
         app.state.vector_index = index
         print("Successfully connected to Qdrant Index.")
         
@@ -45,8 +41,6 @@ async def lifespan(app: FastAPI):
     yield
     # SHUTDOWN
     app.state.vector_index = None
-    
-
 
 app = FastAPI(
     title="SMSF RAG API",
@@ -54,9 +48,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Include Routers
+# Include Routers with consistent prefixing
 app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(health.router, prefix="/api", tags=["System"])
+app.include_router(storage.router, prefix="/api", tags=["Storage"])
 
 @app.get("/")
 async def root():
