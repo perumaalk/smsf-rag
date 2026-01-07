@@ -35,34 +35,6 @@ class DOSpacesHandler:
             aws_access_key_id=key,
             aws_secret_access_key=secret
         )
-# class DOSpacesHandler:
-#     def __init__(self):
-#         self.session = boto3.session.Session()
-#         self.client = self.session.client(
-#             's3',
-#             region_name=os.getenv('DO_SPACES_REGION'),
-#             endpoint_url=os.getenv('DO_SPACES_ENDPOINT'),
-#             aws_access_key_id=os.getenv('DO_SPACES_KEY'),
-#             aws_secret_access_key=os.getenv('DO_SPACES_SECRET')
-#         )
-#         self.bucket_name = os.getenv('DO_SPACES_BUCKET')
-
-    # def list_files(self, prefix=""):
-    #     """Lists files in the Space."""
-    #     try:
-    #         response = self.client.list_objects_v2(
-    #             Bucket=self.bucket_name, 
-    #             Prefix=prefix
-    #         )
-    #         files = [
-    #             {"name": obj['Key'], "size": obj['Size'], "last_modified": obj['LastModified']}
-    #             for obj in response.get('Contents', [])
-    #         ]
-    #         return files
-    #     except ClientError as e:
-    #         print(f"Error listing files: {e}")
-    #         return []
-    
 
     def list_files(self, prefix=""):
         """Lists all files recursively under a prefix."""
@@ -75,6 +47,14 @@ class DOSpacesHandler:
                 Bucket=self.bucket_name, 
                 Prefix=prefix
             )
+
+            # --- DEBUG START ---
+            print(f"DEBUG: Full Response: {response}")
+            # -------------------
+            
+            if 'Contents' not in response:
+                print("DEBUG: 'Contents' key is missing from the response.")
+                return []
             
             files = []
             for obj in response.get('Contents', []):
