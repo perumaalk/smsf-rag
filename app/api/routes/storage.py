@@ -3,12 +3,16 @@ from datetime import datetime
 from app.api.dependencies import get_storage_handler, get_index
 from app.storage.do_spaces import DOSpacesHandler
 from llama_index.core import Document
+from app.api.dependencies import verify_api_key
+
 
 router = APIRouter()
 
 @router.get("/files")
 async def list_available_files(
-    handler: DOSpacesHandler = Depends(get_storage_handler)):
+    handler: DOSpacesHandler = Depends(get_storage_handler),
+    key: str = Depends(verify_api_key)
+    ):
     # 'handler' is automatically provided by the dependency
     files = handler.list_files()
     return {"files": files}
@@ -28,8 +32,11 @@ async def list_available_files(
 @router.post("/process-selected")
 async def process_file(
     file_key: str, 
+    fund_id: str = "global",  # Default to global for legislation
+    doc_type: str = "legislation", # Default to legislation
     index = Depends(get_index), 
-    handler: DOSpacesHandler = Depends(get_storage_handler)
+    handler: DOSpacesHandler = Depends(get_storage_handler),
+    key: str = Depends(verify_api_key)
 ):
     """
     1. Downloads file from DigitalOcean Spaces.
@@ -49,6 +56,8 @@ async def process_file(
             text=text_content, 
             metadata={
                 "file_name": file_key,
+                "fund_id": fund_id,        # Crucial for filtering private deeds
+                "doc_type": doc_type,      # Crucial for routing to 'legislation' or 'trust_deed'
                 "category": "smsf_document",
                 "processed_at": datetime.utcnow().isoformat()
             }
@@ -91,7 +100,9 @@ async def process_file(
 @router.get("/download")
 async def get_file_download_link(
     file_key: str = Query(..., description="The full path of the file to download"),
-    handler: DOSpacesHandler = Depends(get_storage_handler) ):
+    handler: DOSpacesHandler = Depends(get_storage_handler),
+    key: str = Depends(verify_api_key)
+    ):
     url = handler.generate_download_url(file_key)
     
     if not url:
@@ -100,7 +111,10 @@ async def get_file_download_link(
     return {"download_url": url}
 
 @router.get("/registry")
-async def get_index_registry(handler: DOSpacesHandler = Depends(get_storage_handler)):
+async def get_index_registry(
+    handler: DOSpacesHandler = Depends(get_storage_handler),
+    key: str = Depends(verify_api_key)
+    ):
     """Returns the list of files already indexed in Qdrant."""
     return handler.get_registry()
 
@@ -108,7 +122,8 @@ async def get_index_registry(handler: DOSpacesHandler = Depends(get_storage_hand
 async def update_registry_status(
     file_key: str, 
     status: str = "completed",
-    handler: DOSpacesHandler = Depends(get_storage_handler)
+    handler: DOSpacesHandler = Depends(get_storage_handler),
+    key: str = Depends(verify_api_key)
 ):
     # 1. Get (Returns template if file doesn't exist)
     registry = handler.get_registry()
@@ -134,7 +149,8 @@ async def update_registry_status(
 @router.delete("/files/delete")
 async def delete_file_and_registry_entry(
     file_key: str, 
-    handler: DOSpacesHandler = Depends(get_storage_handler)
+    handler: DOSpacesHandler = Depends(get_storage_handler),
+    key: str = Depends(verify_api_key)
 ):
     # 1. Delete the physical file from DigitalOcean
     # Note: S3 delete_object returns success even if the file doesn't exist

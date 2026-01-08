@@ -1,6 +1,8 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends,
 from pydantic import BaseModel
 from app.engine.query_engine import get_smsf_query_engine
+from app.api.dependencies import verify_api_key
+
 
 router = APIRouter()
 
@@ -32,9 +34,15 @@ async def execute_rag_logic(query_data: QueryRequest, request: Request):
 
 # 2. Map BOTH routes to that same logic
 @router.post("/ask")
-async def ask_endpoint(query_data: QueryRequest, request: Request):
+async def ask_endpoint(
+    query_data: QueryRequest, request: Request,
+    key: str = Depends(verify_api_key)
+    ):
     return await execute_rag_logic(query_data, request)
 
 @router.post("/query")
-async def query_endpoint(query_data: QueryRequest, request: Request):
+async def query_endpoint(
+    query_data: QueryRequest, request: Request,
+    key: str = Depends(verify_api_key)
+    ):
     return await execute_rag_logic(query_data, request)

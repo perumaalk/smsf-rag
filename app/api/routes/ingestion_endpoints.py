@@ -2,7 +2,8 @@
 
 import os
 import shutil
-from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException
+from fastapi import APIRouter, UploadFile, File, BackgroundTasks, HTTPException, Depends
+from app.api.dependencies import verify_api_key
 
 # Import the logic from your ingestion folder
 from ingestion.ato_ruling import ingest_ato_ruling
@@ -15,7 +16,8 @@ router = APIRouter(prefix="/ingest", tags=["Ingestion"])
 async def api_ingest_ruling(
     ruling_id: str, 
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    key: str = Depends(verify_api_key)
 ):
     """
     Endpoint for ATO Rulings. 
@@ -46,7 +48,8 @@ async def api_ingest_ruling(
 async def api_ingest_trust_deed(
     fund_id: str, 
     background_tasks: BackgroundTasks,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    key: str = Depends(verify_api_key)
 ):
     """
     Endpoint for Trust Deeds.

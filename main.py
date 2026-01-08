@@ -48,6 +48,23 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+from fastapi.middleware.cors import CORSMiddleware
+
+ALLOWED_ORIGINS = [
+    "https://capistrol.com",
+    "https://www.capistrol.com",
+    "https://capistrol.vercel.app",
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
+
 # Include Routers with consistent prefixing
 app.include_router(query.router, prefix="/api", tags=["Query"])
 app.include_router(health.router, prefix="/api", tags=["System"])

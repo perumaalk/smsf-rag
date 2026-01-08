@@ -1,1 +1,0 @@
-If the Trust Deed allows an action but the SIS Act prohibits it, prioritize the SIS Act and flag the conflict to the user.

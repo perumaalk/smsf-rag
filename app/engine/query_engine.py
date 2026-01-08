@@ -1,10 +1,7 @@
 
 
-from app.prompts.smsf_templates import SMSF_FALLBACK_PROMPT
-
 from app.core.vectorstore import index as vector_index
-from app.prompts.smsf_templates import SMSF_QA_PROMPT, SMSF_REFINE_PROMPT
-########################
+
 from llama_index.core.query_engine import RouterQueryEngine
 from llama_index.core.tools import QueryEngineTool, ToolMetadata
 from llama_index.core.selectors import LLMSingleSelector
@@ -15,23 +12,28 @@ from llama_index.core import Settings
 from llama_index.core import PromptTemplate
 
 SMSF_QA_PROMPT_TEXT = (
-    "Context information is below.\n"
-    "---------------------\n"
-    "{context_str}\n"
-    "---------------------\n"
-    "You are a highly senior SMSF (Self-Managed Superannuation Fund) Compliance Auditor. "
-    "Your goal is to provide technical, accurate, and evidence-based answers regarding "
-    "Australian superannuation law (SIS Act/Regs) and specific Trust Deed provisions.\n\n"
+    "### ROLE\n"
+    "You are a highly precise SMSF Compliance Specialist and Legal Researcher. [cite: 1]\n\n"
     
-    "STRICT RULES:\n"
-    "1. ONLY use the provided context to answer. Do not use outside general knowledge.\n"
-    "2. If the answer is not in the context, state: 'The provided documents do not contain "
-    "information to answer this specific query.'\n"
-    "3. ALWAYS cite the specific section (e.g., 'SIS Act Section 62') or Deed clause if present.\n"
-    "4. If there is a conflict between the Trust Deed and the Law, prioritize the Law but "
-    "mention the Deed's specific rule.\n"
-    "5. Do NOT provide financial or personal advice; maintain a technical, compliance-focused tone.\n\n"
+    "### HIERARCHY OF AUTHORITY\n"
+    "1. MANDATORY LAW: If the SIS Act or SIS Regulations prohibit an action, it is prohibited regardless of what the Trust Deed or ATO Rulings say. [cite: 3]\n"
+    "2. TRUST DEED: A Trust Deed can be MORE restrictive than the SIS Act, but it cannot be LESS restrictive. [cite: 4]\n"
+    "3. ATO RULINGS: Use these to interpret how the law applies to specific scenarios. [cite: 5]\n\n"
     
+    "### STRICT RULES\n"
+    "1. ONLY use the provided context to answer technical compliance queries. [cite: 2]\n"
+    "2. CITATION: Cite SIS Act by Section (e.g., 's 62 SIS Act') and Deed by Clause (e.g., 'Clause 12.4'). DO NOT hallucinate citations. [cite: 6, 7, 8]\n"
+    "3. SCOPE CHECK:\n"
+    "   - If the query is a general SMSF query not found in the documents: State 'This query is not directly addressed in the provided compliance documents; however, based on general SMSF principles, the answer is as follows:' then provide the answer.\n"
+    "   - If the query is NOT related to SMSF: State 'This query does not relate to SMSF and cannot be answered.' and do not provide further information.\n\n"
+    
+    "### RESPONSE STRUCTURE [cite: 9]\n"
+    "1. SUMMARY: A direct 'Yes/No/It Depends' answer.\n"
+    "2. LEGAL BASIS: Reference the SIS Act and Regulations. [cite: 9]\n"
+    "3. DEED PERMISSION: State if the provided Trust Deed specifically allows or restricts this power. [cite: 10]\n"
+    "4. CONFLICTS: Explicitly flag if the Trust Deed is silent or conflicts with the SIS Act. [cite: 11, 15]\n\n"
+    
+    "Context: {context_str}\n"
     "Query: {query_str}\n"
     "Answer: "
 )
@@ -39,22 +41,24 @@ SMSF_QA_PROMPT_TEXT = (
 SMSF_QA_PROMPT = PromptTemplate(SMSF_QA_PROMPT_TEXT)
 SMSF_REFINE_PROMPT_TEXT = (
     "The original query is as follows: {query_str}\n"
-    "We have provided an existing answer: {existing_answer}\n"
-    "We have the opportunity to refine the existing answer "
-    "(only if needed) with some more context below.\n"
+    "We have provided an existing compliance answer: {existing_answer}\n"
+    "New context is provided below:\n"
     "------------\n"
     "{context_msg}\n"
     "------------\n"
-    "Given the new context, refine the original answer to be more accurate, "
-    "comprehensive, or to provide specific citations from the additional text.\n\n"
+    "As a Senior SMSF Compliance Auditor, refine the existing answer only if the new context "
+    "provides more specific citations, identifies a legal conflict, or clarifies a Deed provision.\n\n"
     
-    "STRICT AUDITOR GUIDELINES:\n"
-    "1. If the new context isn't useful, return the existing answer exactly.\n"
-    "2. If the new context provides a more specific clause or a contradictory "
-    "legal rule, update the answer to reflect this precision.\n"
-    "3. Maintain the technical, compliance-focused tone of a senior auditor.\n"
-    "4. Do not mention that you are 'refining' or 'updating' the answer in the "
-    "final output; simply provide the improved compliance response.\n\n"
+    "STRICT AUDITOR REFINEMENT RULES:\n"
+    "1. CITATION PRECISION: If the new context contains a specific Clause or Section number missing from "
+    "the original answer, you MUST incorporate it[cite: 6, 7].\n"
+    "2. HIERARCHY CHECK: If the new context reveals the SIS Act prohibits something the Deed allows, "
+    "update the answer to flag this conflict immediately[cite: 3, 4, 15].\n"
+    "3. SCOPE ADHERENCE:\n"
+    "   - If the new context confirms the query is general SMSF knowledge, ensure the 'General Principles' "
+    "disclaimer is present.\n"
+    "   - If the query is non-SMSF related, strictly return: 'This query does not relate to SMSF and cannot be answered.'\n"
+    "4. TONE: Maintain a technical, evidence-based tone. Do not acknowledge the 'refinement' process in the output.\n\n"
     
     "Refined Answer: "
 )
@@ -73,18 +77,14 @@ def get_smsf_query_engine(fund_id: str, vector_index):
 
     # Helper to build the underlying engine for each tool
     def create_compliant_engine(filters):
-        # This returns a RetrieverQueryEngine instance
         return vector_index.as_query_engine(
             similarity_top_k=5,
             filters=filters,
-            # Ensure these prompt variables are imported or defined in this file
-            # text_qa_template=SMSF_QA_PROMPT,
-            # refine_template=SMSF_REFINE_PROMPT
             text_qa_template=SMSF_QA_PROMPT,
             refine_template=SMSF_REFINE_PROMPT
         )
 
-    # 1. Public Law Tool
+    # 1. Public Law Tool (Always available)
     public_filters = MetadataFilters(filters=[
         ExactMatchFilter(key="doc_type", value="legislation")
     ])
@@ -95,21 +95,27 @@ def get_smsf_query_engine(fund_id: str, vector_index):
             description="Search here for SIS Act regulations and general superannuation law."
         )
     )
-    
-    # 2. Private Deed Tool (Fund Specific)
-    private_filters = MetadataFilters(filters=[
-        ExactMatchFilter(key="fund_id", value=fund_id),
-        ExactMatchFilter(key="doc_type", value="trust_deed")
-    ])
-    deed_tool = QueryEngineTool(
-        query_engine=create_compliant_engine(private_filters),
-        metadata=ToolMetadata(
-            name="private_deed",
-            description=f"Search here for specific rules within the Trust Deed for Fund {fund_id}."
-        )
-    )
 
-    # 3. Fallback Tool for General Greetings/Questions
+    # Initialize the list of tools with the public law tool
+    query_engine_tools = [public_tool]
+
+    # 2. Private Deed Tool (Conditional Access)
+    # Only add the deed tool if fund_id is provided and not "global"
+    if fund_id and fund_id.lower() != "global":
+        private_filters = MetadataFilters(filters=[
+            ExactMatchFilter(key="fund_id", value=fund_id),
+            ExactMatchFilter(key="doc_type", value="trust_deed")
+        ])
+        deed_tool = QueryEngineTool(
+            query_engine=create_compliant_engine(private_filters),
+            metadata=ToolMetadata(
+                name="private_deed",
+                description=f"Search here for specific rules within the Trust Deed for Fund {fund_id}."
+            )
+        )
+        query_engine_tools.append(deed_tool)
+    
+    # 3. Fallback Tool (Always available)
     fallback_engine = llm.as_query_engine()
     fallback_tool = QueryEngineTool(
         query_engine=fallback_engine,
@@ -118,10 +124,11 @@ def get_smsf_query_engine(fund_id: str, vector_index):
             description="Use this for greetings or general superannuation questions."
         )
     )
+    query_engine_tools.append(fallback_tool)
 
-    # 4. Final Router
+    # 4. Final Router using the dynamically built list of tools
     return RouterQueryEngine(
         selector=LLMSingleSelector.from_defaults(),
-        query_engine_tools=[public_tool, deed_tool, fallback_tool],
+        query_engine_tools=query_engine_tools,
         verbose=True
     )
