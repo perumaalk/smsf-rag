@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request, Depends,
+from fastapi import APIRouter, HTTPException, Request, Depends
 from pydantic import BaseModel
 from app.engine.query_engine import get_smsf_query_engine
 from app.api.dependencies import verify_api_key
